@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Empyria – Prototype v0.1</title>
+<script>
+(function(){
+ var ready=false,lastError='',timer;
+ function show(message){
+  if(ready)return;
+  lastError=message;
+  var boot=document.getElementById('boot');if(!boot)return;
+  boot.textContent='';
+  var card=document.createElement('div');card.style.cssText='max-width:440px;padding:24px;color:#dbe6f3;font:14px/1.6 system-ui;text-align:center';
+  var title=document.createElement('h2');title.textContent='Empyria kon niet starten';
+  var detail=document.createElement('p');detail.textContent=message;detail.style.overflowWrap='anywhere';
+  var hint=document.createElement('p');hint.textContent='Build v0.32. Stuur een screenshot van deze melding als opnieuw laden niet helpt.';
+  var retry=document.createElement('button');retry.textContent='Opnieuw laden';retry.style.cssText='padding:12px 18px;margin-top:16px;border:1px solid #34d1c2;border-radius:6px;background:#163d43;color:white';
+  retry.onclick=function(){var url=new URL(location.href);url.searchParams.set('v','033');url.searchParams.set('retry',Date.now());location.replace(url.href);};
+  card.append(title,detail,hint,retry);boot.appendChild(card);
+ }
+ window.EmpyriaBoot={fail:show,ready:function(){ready=true;clearTimeout(timer);}};
+ window.addEventListener('error',function(e){
+  var source=e.target;
+  if(source&&source.tagName==='SCRIPT'){
+   var src=source.getAttribute('src')||'';
+   if(src.indexOf('assets/js/game.js')>=0)show('Spelbestand niet geladen: '+src+'. Controleer of de volledige assets-map is geüpload.');
+  }else if(e.message)show('Opstartfout: '+e.message);
+ },true);
+ document.addEventListener('DOMContentLoaded',function(){if(lastError)show(lastError);});
+ timer=setTimeout(function(){show(lastError||'Het laden duurt te lang. Een asset is niet bereikbaar of de 3D-weergave start niet op dit apparaat.');},45000);
+})();
+</script>
+
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="assets/vendor/three.min.js?v=033"></script>
+<script src="assets/js/startup-1.js?v=033"></script>
+<style>
+:root{--tgtop:0px;--tgbot:0px;--barh:112px;--panel:rgba(8,19,33,.94);--panel2:#0b1829;--line:#1a3350;--line-hi:#2a5580;--teal:#34d1c2;--blue:#3a9bff;--blue-deep:#1c5fc4;--text:#dbe6f3;--muted:#7d91a8;--gold:#f5b73b;--green:#4fd66a;--red:#ff5d5d;--orange:#ffa23d}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#124a78;color:var(--text);font:13px/1.35 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none}
+#boot{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#081322;transition:opacity .35s}
+#boot.gone{opacity:0;pointer-events:none}
+.bootcard{text-align:center}
+.bt{font-weight:800;font-size:30px;letter-spacing:.1em;margin-top:10px}
+.bs{color:#7d91a8;font-size:13px;margin-top:6px;letter-spacing:.04em}
+.bbar{width:210px;height:4px;background:#152539;border-radius:2px;margin:16px auto 0;overflow:hidden}
+.bbar i{display:block;height:100%;width:40%;background:#34d1c2;border-radius:2px;animation:bsl 1.1s ease-in-out infinite}
+@keyframes bsl{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+#vig{position:fixed;inset:0;pointer-events:none;z-index:2;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 48%,rgba(3,10,20,.30) 100%)}
+#gl{filter:saturate(1.09) contrast(1.05);position:fixed;inset:0;touch-action:none;cursor:grab;display:block}
+#gl.pointer{cursor:pointer}#gl.build{cursor:crosshair}#gl.grabbing{cursor:grabbing}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 10px 28px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.04)}
+.ph{color:var(--teal);font-weight:700;font-size:12.5px;letter-spacing:.07em;padding:9px 12px 7px;display:flex;align-items:center;justify-content:space-between}
+.ph button{color:#88a0ba;font-size:17px;line-height:1;padding:0 2px;margin:-4px 0}
+.ph button:hover{color:var(--text)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.pos{color:var(--green)}.neg{color:var(--red)}.warn{color:var(--orange)}
+
+/* ---- header row 1 ---- */
+#top{position:fixed;top:0;left:0;right:0;height:calc(60px + var(--tgtop));display:flex;align-items:flex-end;gap:10px;padding:6px 10px;padding-top:calc(6px + var(--tgtop));background:linear-gradient(#0a1524,#07101c);border-bottom:1px solid #14273f;z-index:6}
+.brand{display:flex;align-items:center;gap:10px;flex:none}
+.brand svg{width:42px;height:33px}
+.bname{font-weight:800;font-size:24px;letter-spacing:.05em;line-height:1}
+.bsub{font-size:9px;letter-spacing:.22em;color:var(--teal);margin-top:3px}
+#nav{display:flex;gap:2px;margin-left:14px;flex:1;min-width:0;overflow:hidden}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 14px;border-radius:5px;border:1px solid transparent;font-size:10px;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.tab svg{width:19px;height:19px}
+.tab:hover{color:var(--text);background:#0d1c2f}
+.tab.on{color:var(--text);background:#123456;border-color:#2f6ea8;box-shadow:inset 0 0 0 1px rgba(58,155,255,.25)}
+.chip{display:flex;align-items:center;gap:9px;padding:5px 12px;background:#0b1a2c;border:1px solid var(--line);border-radius:5px;height:46px;flex:none;transition:border-color .2s}
+.chip.flash{border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}
+.coin{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd978,#e59a14 70%);color:#5a3800;font-weight:800;display:grid;place-items:center;font-size:15px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2);flex:none}
+.chip label{display:block;font-size:10px;color:var(--muted);letter-spacing:.06em}
+.chip b{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}
+.chip .sub{font-size:12px;margin-left:7px;font-weight:600}
+.avatar{width:30px;height:30px;border-radius:4px;background:#23364d;display:grid;place-items:center;flex:none}
+.lvl{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.bar{height:4px;background:#152539;border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--green);transition:width .3s}
+.lvl .bar{width:88px}.lvl .bar i{background:var(--blue)}
+#gear{width:40px;height:46px;display:grid;place-items:center;background:#0b1a2c;border:1px solid var(--line);border-radius:5px;flex:none;color:#9fb3c9}
+#gear:hover{color:var(--text);border-color:var(--line-hi)}
+
+/* ---- header row 2: stats ---- */
+body.statsHidden #statbar{display:none}
+body.oneRow #top{gap:0;padding-left:8px;padding-right:8px;flex-wrap:wrap;align-items:center;
+  background:linear-gradient(#0b1726,#081220);border-bottom:1px solid #16293f}
+/* alle technische waarden in de balk, in twee compacte rijen */
+body.oneRow #statbar{position:fixed;left:0;right:0;height:auto;
+  top:calc(48px + var(--tgtop));
+  padding:0 8px 3px;z-index:6;
+  background:linear-gradient(#0a1624,#081220);
+  border-bottom:1px solid #16293f;
+  display:flex;flex-wrap:wrap;overflow:visible;gap:0}
+body.oneRow .chip,body.oneRow #statbar .stat{
+  background:none;border:0;border-radius:0;box-shadow:none;position:relative}
+body.oneRow #balCard{flex:1 1 auto;height:40px;padding:0 2px}
+body.oneRow #balCard b{font-size:20px}
+body.oneRow #statbar .stat{flex:1 1 76px;min-width:76px;height:31px;padding:0 5px;gap:4px}
+body.oneRow #statbar .stat::before{content:'';position:absolute;left:0;top:6px;bottom:6px;
+  width:1px;background:#1b3350}
+body.oneRow #statbar .stat:first-child::before{display:none}
+body.oneRow #statbar .stat label{font-size:8px;letter-spacing:.05em;color:#6f849c;line-height:1.1}
+body.oneRow #statbar .stat b{font-size:12.5px;line-height:1.15}
+body.oneRow #statbar .stat svg{width:14px;height:14px}
+body.oneRow #statbar .stat .bar{display:none}
+body.oneRow .brand{padding-right:6px}
+body.oneRow #balCard{flex:none}
+body.statsHidden #balChev{transform:rotate(-90deg)}
+#balChev{transition:transform .18s}
+#statbar{position:fixed;top:calc(60px + var(--tgtop));left:0;right:0;height:50px;display:flex;gap:6px;padding:0 10px 4px;background:linear-gradient(#07101c,rgba(7,16,28,0));z-index:6;overflow-x:auto;scrollbar-width:none}
+#statbar::-webkit-scrollbar{display:none}
+.stat{display:flex;align-items:center;gap:9px;padding:4px 14px 4px 11px;background:#0b1a2c;border:1px solid var(--line);border-radius:5px;flex:none;height:46px}
+.stat svg{width:21px;height:21px;flex:none}
+.stat label{display:block;font-size:9.5px;color:var(--muted);letter-spacing:.1em}
+.stat b{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat .bar{margin-top:3px}
+
+/* ---- left sidebar ---- */
+#side{position:fixed;left:10px;top:118px;bottom:88px;width:224px;display:flex;flex-direction:column;z-index:4}
+#cats{display:flex;gap:4px;padding:0 6px 7px;flex-wrap:wrap}
+.cbtn{flex:1;min-width:58px;padding:5px 4px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);font-size:9.5px;letter-spacing:.07em;font-weight:600;color:var(--muted)}
+.cbtn.on{border-color:var(--teal);color:var(--text);background:#0e2a3a}
+.cbtn:hover{color:var(--text)}
+#list{flex:1;overflow-y:auto;padding:0 6px 6px;scrollbar-width:thin;scrollbar-color:#24405f transparent}
+.item{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:4px 8px 4px 4px;margin-bottom:5px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;position:relative}
+.item:hover{border-color:var(--line-hi);background:#0f2036}
+.item.on{border-color:var(--teal);background:#0e2a3a;box-shadow:inset 0 0 0 1px rgba(52,209,194,.35)}
+.item img{width:52px;height:52px;flex:none}
+.item .n{font-weight:600;font-size:13.5px}
+.item .d{color:var(--muted);font-size:12px}
+.item .c{color:var(--gold);font-weight:600;font-size:12.5px}
+.item.poor .c{color:var(--red)}
+.item .lock{display:none;position:absolute;right:6px;bottom:6px;font-size:10.5px;color:var(--gold);border:1px solid #5a4a1e;background:#221b09;border-radius:3px;padding:0 5px}
+.item.locked{opacity:.5}
+.item.locked .lock{display:block}
+.item.locked:hover{border-color:var(--line)}
+.item .k{position:absolute;right:7px;top:6px;font-size:10px;color:#4f6781;border:1px solid #22384f;border-radius:3px;padding:0 4px}
+.tools{display:flex;gap:6px;padding:8px;border-top:1px solid var(--line)}
+.tool{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;border:1px solid var(--line);border-radius:5px;background:var(--panel2);font-size:11px;color:var(--muted)}
+.tool svg{width:19px;height:19px}
+.tool.on{border-color:var(--teal);color:var(--text);background:#0e2a3a}
+.tool.danger.on{border-color:var(--red);background:#2a1216}
+
+/* ---- right column ---- */
+#right{position:fixed;right:10px;top:118px;bottom:262px;width:272px;display:flex;flex-direction:column;gap:8px;z-index:4;overflow-y:auto;scrollbar-width:none}
+#right::-webkit-scrollbar{display:none}
+#right>*{flex:none}
+#region{display:flex;gap:10px;padding:10px}
+#rthumb{width:94px;height:64px;border-radius:4px;flex:none;background:#2d6a34 center/cover no-repeat;border:1px solid var(--line)}
+#region .t{font-weight:700;font-size:15.5px;letter-spacing:.04em}
+#region p{color:var(--muted);font-size:12px;margin:2px 0 7px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:6px 12px;border-radius:4px;background:var(--blue-deep);border:1px solid #3d84e8;font-weight:600;font-size:11.5px;letter-spacing:.04em}
+.btn:hover{background:#2468d4}
+.btn.red{background:#9b1f25;border-color:#d0444a}.btn.red:hover{background:#b3262d}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+#sel .body,#tech .body{padding:0 12px 12px}
+.selhead{display:flex;gap:10px;align-items:flex-start;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:8px}
+.selhead img{width:70px;height:70px;flex:none}
+.rows{margin-top:3px;font-size:12px;flex:1;min-width:0}
+.rows div{display:flex;justify-content:space-between;gap:10px;color:var(--muted);padding:1px 0}
+.rows b{color:var(--text);font-weight:600}
+.status{display:flex;align-items:center;gap:8px;margin:10px 0;font-weight:600;color:var(--green)}
+.status i{width:10px;height:10px;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px rgba(79,214,106,.2)}
+.status.warn{color:var(--orange)}.status.warn i{box-shadow:0 0 0 3px rgba(255,162,61,.2)}
+.selbtns{display:flex;gap:8px}.selbtns .btn{flex:1}
+#techBody{display:flex;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:8px}
+#techBody img{width:56px;height:56px;flex:none}
+#techBody .n{font-weight:600;font-size:13.5px}
+#techBody .d{color:var(--muted);font-size:12px;margin-bottom:7px}
+.mission{margin:0 12px 10px;padding:10px;background:var(--panel2);border:1px solid var(--line);border-radius:5px}
+.mission .n{font-weight:600;font-size:13.5px}
+.mission .d{color:var(--muted);font-size:12px;margin:2px 0 8px}
+.mrow{display:flex;align-items:center;gap:10px}
+.mrow .bar{flex:1;height:8px;border:1px solid #2a4a6c;background:#0a1522;border-radius:4px}
+.mrow .bar i{background:linear-gradient(90deg,#1f6fe0,#3aa0ff)}
+.mrow span{color:var(--blue);font-weight:600;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.reward{margin-top:8px;font-size:12.5px}.reward b{color:var(--green)}
+
+/* ---- map labels ---- */
+#grade{position:fixed;inset:0;pointer-events:none;z-index:2;
+  background:radial-gradient(125% 95% at 50% 44%, rgba(0,0,0,0) 52%, rgba(5,14,26,.30) 100%)}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:3;overflow:hidden}
+.mlab{position:absolute;transform:translate(-50%,-100%);display:flex;align-items:center;gap:7px;padding:5px 10px 5px 7px;background:rgba(9,20,34,.9);border:1px solid #24456a;border-radius:5px;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.mlab svg{width:15px;height:15px;flex:none}
+.mlab .n{font-size:10.5px;letter-spacing:.1em;font-weight:700;color:#e7f0fa}
+.mlab .v{font-size:11.5px;font-weight:600;color:var(--teal);margin-top:1px}
+.mlab.alert{background:rgba(60,12,14,.92);border-color:#c23b3b;padding:4px 9px}
+.mlab.alert .n{color:#ffd2d2}
+.badge{position:absolute;transform:translate(-50%,-100%);width:26px;height:26px;border-radius:6px;display:grid;place-items:center;font-weight:800;font-size:15px;color:#fff;background:#d33b3b;border:1px solid #ff8080;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+.badge.wrench{background:#e8eef5;border-color:#fff;color:#33404f}
+.badge.wrench svg{width:15px;height:15px}
+
+/* ---- bottom ---- */
+#bot{position:fixed;left:0;right:0;bottom:0;height:78px;display:flex;align-items:center;gap:16px;padding:0 14px;background:linear-gradient(#07111e,#050c16);border-top:1px solid var(--line);z-index:5}
+.mega{width:42px;height:42px;border-radius:5px;background:#0e1d30;border:1px solid var(--line);display:grid;place-items:center;flex:none}
+#log{flex:1.3;font-size:12px;color:#aebccc;min-width:0}
+#log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#log time{color:#5f7690;margin-right:12px;font-variant-numeric:tabular-nums}
+#log .bad{color:#ff8a8a}#log .good{color:#7fe596}
+.tag{letter-spacing:.42em;font-size:10.5px;color:#6c8199;text-align:center;flex:1}
+.ver{font-size:11px;color:#5f7690}
+
+/* ---- overlays ---- */
+#hint{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);display:flex;gap:16px;padding:7px 14px;font-size:11.5px;color:#9fb1c6;z-index:3;white-space:nowrap}
+#hint kbd{font:inherit;font-weight:600;color:var(--text);border:1px solid var(--line-hi);border-radius:3px;padding:0 5px;margin-right:5px;background:#0f2239}
+#tut{position:fixed;left:250px;top:calc(124px + var(--tgtop));width:330px;padding:11px 13px;z-index:8;display:none;border-color:#2f6ea8}
+#tut .tstep{color:var(--teal);font-size:10px;letter-spacing:.12em;font-weight:700}
+#tut .ttitle{font-size:15px;font-weight:700;margin:3px 0 4px}
+#tut .tdesc{color:var(--muted);font-size:12.5px;line-height:1.45;margin-bottom:9px}
+#tut .btn{background:#1b2b40;border-color:#2a4a6c;font-size:11px;padding:4px 9px}
+@media (max-width:860px){
+ #nav{display:none}
+ body.showInfo #nav{display:flex;flex-wrap:wrap;gap:5px;margin:0;padding:8px;
+   background:var(--panel);border:1px solid var(--line);border-radius:6px;flex:none;order:-1}
+ body.showInfo #nav .tab{flex:1 1 30%;min-width:86px;padding:7px 4px;font-size:9px}
+ body.showInfo #nav .tab span{display:inline}
+ body.showInfo #nav .tab svg{width:17px;height:17px}
+#tut{left:6px;right:56px;top:calc(var(--barh) + 6px);width:auto}}
+#mode{position:fixed;top:122px;left:50%;transform:translateX(-50%);padding:7px 14px;font-size:12.5px;z-index:4;display:none;white-space:nowrap}
+#mode b{color:var(--gold)}
+#mini{position:fixed;right:10px;bottom:90px;width:160px;padding:6px;z-index:4}
+#mini canvas{display:block;width:100%;height:auto;border-radius:3px;background:#0c3050}
+#compass{position:fixed;right:180px;bottom:90px;width:44px;height:44px;z-index:4;display:grid;place-items:center;border-radius:50%}
+#compass svg{width:28px;height:28px;transition:transform .1s linear}
+
+@media (max-width:1180px){#nav .tab span{display:none}#nav .tab{padding:8px 11px}}
+@media (max-width:980px){#hint{display:none}}
+#modal{position:fixed;inset:0;background:rgba(4,10,18,.68);z-index:20;display:none;align-items:center;justify-content:center;padding:16px}
+#modal.on{display:flex}
+#modalCard{width:min(560px,100%);max-height:82vh;display:flex;flex-direction:column}
+#modalT{display:flex;justify-content:space-between;align-items:center;font-size:14px}
+#modalT button{color:var(--muted);font-size:15px;padding:0 4px}
+#modalT button:hover{color:var(--text)}
+#modalB{overflow-y:auto;padding:0 12px 12px}
+.card{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px;margin-bottom:8px;background:var(--panel2);border:1px solid var(--line);border-radius:5px}
+.card .n{font-weight:600;font-size:13.5px}
+.card .d{color:var(--muted);font-size:12px;margin-top:2px}
+.card.done{opacity:.55}
+.lb{display:flex;justify-content:space-between;padding:7px 10px;border-bottom:1px solid #132840;font-size:13px}
+.lb.me{background:#10304a;color:var(--teal);font-weight:600;border-radius:4px}
+.spark{display:block;width:100%;height:70px;background:#08131f;border:1px solid var(--line);border-radius:4px;margin-bottom:10px}
+#zoomBox{position:fixed;right:292px;bottom:calc(150px + var(--tgbot));display:flex;flex-direction:column;gap:6px;z-index:6}
+.zbtn{width:44px;height:44px;display:grid;place-items:center;font-size:22px;font-weight:600;color:#cfe0f2;line-height:1}
+.zbtn:hover{color:var(--teal);border-color:var(--teal)}
+.zbtn:active{background:#12304a}
+@media (max-width:860px){#zoomBox{right:6px;top:calc(var(--barh) + 54px);bottom:auto}.zbtn{width:40px;height:40px;font-size:20px}}
+#panelBtn{display:none;position:fixed;right:6px;top:calc(var(--barh) + 6px);width:40px;height:40px;place-items:center;color:#cfe0f2;z-index:7}
+#panelBtn.on{color:var(--teal);border-color:var(--teal)}
+@media (max-width:860px){
+ #panelBtn{display:grid}
+ body.showInfo #right{display:flex}
+ body.showInfo #region,body.showInfo #mis{display:block}
+ body.showInfo #region{display:flex}
+ body.showInfo #tech{display:block}
+ body.showInfo #mode{display:none!important}
+ #right{overflow-y:auto}
+ .item .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:88px}
+
+ #top{height:calc(48px + var(--tgtop));padding:4px 6px;padding-top:calc(4px + var(--tgtop));gap:6px}
+  .brand .txt,.player,#hint,.tag,.ver,#compass,#mini,.item .k,#bot,#gear{display:none}
+ .brand svg{width:28px;height:23px}
+ #statbar{top:calc(48px + var(--tgtop));height:44px;padding:0 6px 3px;gap:5px}
+ .chip{height:40px;padding:3px 9px}.chip b{font-size:15px}.chip .sub{font-size:11px;margin-left:5px}
+ .stat{height:40px;padding:3px 9px;gap:7px}.stat b{font-size:13.5px}.stat svg{width:16px;height:16px}
+ .stat label{font-size:9px}
+ #side{left:0;right:0;top:auto;bottom:var(--tgbot);width:auto;border-radius:0;flex-direction:row;align-items:stretch;border-left:0;border-right:0;border-bottom:0}
+ #side .ph{display:none}
+ #cats{flex-direction:column;flex-wrap:nowrap;padding:5px 4px;gap:3px;border-right:1px solid var(--line);overflow-y:auto}
+ .cbtn{flex:none;min-width:52px;font-size:8.5px;padding:4px 3px}
+ #list{display:flex;gap:5px;overflow-x:auto;overflow-y:hidden;padding:5px}
+ .item{min-width:136px;margin:0;gap:6px;padding:3px 6px 3px 3px}
+ .item img{width:38px;height:38px}.item .n{font-size:12.5px}.item .d,.item .c{font-size:11px}
+ .tools{flex-direction:column;border-top:0;border-left:1px solid var(--line);padding:5px;gap:4px}
+ .tool{padding:3px 8px;font-size:10px}.tool svg{width:16px;height:16px}
+ /* rechterkolom wordt een bottom sheet die alleen opent bij selectie */
+ #right{display:none;left:6px;right:6px;width:auto;top:auto;bottom:76px;max-height:42vh;gap:6px}
+ body.hasSel #right{display:flex}
+ #region,#tech,#mis{display:none}
+ #sel .body{padding:0 10px 10px}
+ .selhead img{width:56px;height:56px}
+ .selbtns .btn{padding:9px 10px}
+ #mode{top:calc(var(--barh) + 6px);left:6px;right:54px;transform:none;white-space:normal;text-align:center}
+ .mlab{padding:3px 7px 3px 5px}.mlab .n{font-size:9px}.mlab .v{font-size:10px}.mlab svg{width:12px;height:12px}
+ .badge{width:22px;height:22px;font-size:13px}
+}
+@media (prefers-reduced-motion:reduce){.bar i,#compass svg{transition:none}}
+.actor-chat{position:absolute;transform:translate(-50%,-100%);max-width:170px;padding:7px 10px;border:1px solid #63cfc1;border-radius:10px;background:rgba(9,26,39,.96);color:#edf8f7;font:12px/1.35 "Segoe UI",sans-serif;box-shadow:0 4px 12px #0005;pointer-events:none;text-align:center;z-index:3}.actor-chat:after{content:'';position:absolute;left:50%;top:100%;border:5px solid transparent;border-top-color:#63cfc1}.actor-chat[hidden]{display:none}
+</style>
+<link rel="stylesheet" href="assets/telegram-mobile.css?v=033">
+</head>
+<body>
+<div id="boot"><div class="bootcard"><svg viewBox="0 0 48 36" width="64" height="48"><path d="M1 35 17 7l8.5 14L31 13l16 22z" fill="#1a9d90"/><path d="M11 35 24.5 15 38 35z" fill="#34d1c2"/></svg><div class="bt">EMPYRIA</div><div class="bs">Generating Green Valley…</div><div class="bbar"><i></i></div></div></div>
+<canvas id="gl"></canvas>
+<div id="vig"></div>
+<div id="grade"></div>
+<div id="labels"></div>
+
+<header id="top">
+  <div class="brand">
+    <svg viewBox="0 0 48 36" aria-hidden="true"><path d="M1 35 17 7l8.5 14L31 13l16 22z" fill="#1a9d90"/><path d="M17 7 10.5 18.5l6.5-4 4 3.2z" fill="#8af2e6"/><path d="M11 35 24.5 15 38 35z" fill="#34d1c2"/></svg>
+    <div class="txt"><div class="bname">EMPYRIA</div><div class="bsub">CRYPTO MINING EMPIRE</div></div>
+  </div>
+  <nav id="nav">
+    <button class="tab on" data-tab="build"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M14.7 3.3a5 5 0 0 0-6.4 6.4L3 15v6h6l5.3-5.3a5 5 0 0 0 6.4-6.4l-3 3-2.4-2.4z"/></svg><span>BUILD</span></button>
+    <button class="tab" data-tab="research"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-5-9V3"/><path d="M7.6 15h8.8"/></svg><span>RESEARCH</span></button>
+    <button class="tab" data-tab="contracts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg><span>CONTRACTS</span></button>
+    <button class="tab" data-tab="market"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M8.6 7.2a3.4 3.4 0 0 1 6.8 0c0 3.4-6.8 2.2-6.8 6a3.4 3.4 0 0 0 6.8 0"/></svg><span>MARKET</span></button>
+    <button class="tab" data-tab="world"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18"/></svg><span>WORLD</span></button>
+    <button class="tab" data-tab="report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V4M4 20h16"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg><span>REPORT</span></button>
+    <button class="tab" data-tab="leaderboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5v2a3 3 0 0 0 3 3M16 5h3v2a3 3 0 0 1-3 3M10 20h4M12 13v7"/></svg><span>LEADERBOARD</span></button>
+  </nav>
+  <button class="chip" id="balCard" title="Tik om de balk in te klappen"><div class="coin">$</div><div><label>$EMP</label><b id="sBal">0</b><span class="sub pos" id="sRate">+0 /h</span></div><svg id="balChev" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#7d91a8" stroke-width="2.4" style="margin-left:2px"><path d="M6 9l6 6 6-6"/></svg></button>
+  <div class="chip player">
+    <div class="avatar"><svg viewBox="0 0 24 24" width="20" height="20" fill="#9fb3c9"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg></div>
+    <div><div style="font-weight:600" id="playerName">Jeroen</div><div class="lvl">Lv. <span id="lvl">1</span><div class="bar"><i id="xp"></i></div></div></div>
+  </div>
+  <button id="gear" title="Toggle map labels"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 8 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 8a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 3.6h.1A2 2 0 1 1 13 3.7v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+
+<div id="tgAccount" role="status"><span class="tg-dot" aria-hidden="true"></span><span id="tgIdentity">Telegram · Niet verbonden</span></div>
+<div id="statbar">
+  <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="#c9d6e6" stroke-width="1.8"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" fill="#c9d6e6"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg><div><label>HASHRATE</label><b id="sHash">0 TH/s</b></div></div>
+  <div class="stat"><svg viewBox="0 0 24 24"><path d="M13.5 2 4 14h6.5l-1.5 8L19 10h-6.5z" fill="#f5b73b"/></svg><div><label>POWER</label><b id="sPow">0 / 0 kW</b><div class="bar"><i id="powBar"></i></div></div></div>
+  <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" stroke-width="1.8"><path d="M14 14.8V5a2 2 0 1 0-4 0v9.8a4 4 0 1 0 4 0z"/><circle cx="12" cy="17.5" r="1.8" fill="#ff6b6b"/></svg><div><label>HEAT</label><b id="sHeat">0 / 100</b><div class="bar"><i id="heatBar"></i></div></div></div>
+  <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="#4fd66a" stroke-width="1.9"><path d="M4 16a8 8 0 1 1 16 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1.6" fill="#4fd66a"/></svg><div><label>EFFICIENCY</label><b id="sEff">100%</b></div></div>
+  <div class="stat"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="#f0b429"/><path d="M12 6v12M9.2 9.2a2.8 2.8 0 0 1 5.6 0c0 2.8-5.6 1.8-5.6 5a2.8 2.8 0 0 0 5.6 0" fill="none" stroke="#6b4506" stroke-width="1.7"/></svg><div><label>INCOME</label><b id="sInc">+0.00 $EMP/h</b></div></div>
+  <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="#8ad3ff" stroke-width="2"><path d="M3 17l5-6 4 4 5-8 4 5"/></svg><div><label>$EMP PRICE</label><b id="sPrice">1.00×</b></div></div>
+  <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="#ff9d6b" stroke-width="1.9"><path d="M4 19V5M4 19h16"/><path d="M7 16l4-5 3 3 5-8"/></svg><div><label>DIFFICULTY</label><b id="sDiff">1.00×</b></div></div>
+  <div class="stat"><svg viewBox="0 0 24 24" fill="none" stroke="#c9a86e" stroke-width="1.8"><path d="M3 8l9-4 9 4v8l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v8"/></svg><div><label>SUPPLY</label><b id="sSup">0 / 0</b></div></div>
+  <div class="stat" id="batStat" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="#4fd66a" stroke-width="1.8"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/></svg><div><label>BATTERY</label><b id="sBat">0 kWh</b><div class="bar"><i id="batBar"></i></div></div></div>
+  <div class="stat" id="misStat" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="#3a9bff" stroke-width="1.9"><path d="M5 21V4h9l-1 3 1 3H5"/><path d="M5 4 3 3v18"/></svg><div><label id="misName">MISSION</label><b id="misVal">0 / 0</b></div></div>
+</div>
+
+<aside id="side" class="panel">
+  <div class="ph">BUILDINGS</div>
+  <div id="cats"></div>
+  <div id="list"></div>
+  <div class="tools">
+    <button class="tool on" data-tool="select" title="Select (Esc)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 8-6 1.5L10 19z"/></svg>Select</button>
+    <button class="tool" id="undoBtn" title="Undo (Ctrl+Z)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M9 7H5V3"/><path d="M5 7a8 8 0 1 1 1.2 9"/></svg>Undo</button>
+    <button class="tool" data-tool="land" title="Buy land (L)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h18v12H3z"/><path d="M3 11h18M9 7v12"/></svg>Land</button>
+    <button class="tool danger" data-tool="bulldoze" title="Bulldoze (X)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Bulldoze</button>
+  </div>
+</aside>
+
+<div id="right">
+  <div id="region" class="panel">
+    <div id="rthumb"></div>
+    <div><div class="t" id="regName">GREEN VALLEY</div><div id="clock" style="font-size:11.5px;color:var(--teal);letter-spacing:.06em;margin-top:1px">06:00 · DAWN</div><p id="regBlurb">Cheap power. Good climate. Perfect to start.</p><button class="btn" id="regBtn">CHANGE REGION</button></div>
+  </div>
+  <div id="sel" class="panel" style="display:none"></div>
+  <div id="tech" class="panel">
+    <div class="ph">TECHNICIAN</div>
+    <div class="body"><div id="techBody"><img id="techImg" alt=""><div><div class="n" id="techState">Idle</div><div class="d" id="techTask">No active tasks</div><button class="btn" id="techBtn" disabled>VIEW TASKS</button></div></div></div>
+  </div>
+  <div id="mis" class="panel"></div>
+</div>
+
+<button id="panelBtn" class="panel" aria-label="Info panels"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h11"/></svg></button>
+<div id="modal"><div id="modalCard" class="panel"><div class="ph" id="modalT">TITLE<button id="modalX" aria-label="Close">✕</button></div><div id="modalB"></div></div></div>
+<div id="tut" class="panel"></div>
+<div id="mode" class="panel"></div>
+<div id="hint" class="panel"><span><kbd>Drag</kbd>pan</span><span><kbd>Scroll</kbd>zoom</span><span><kbd>Q</kbd><kbd>E</kbd>rotate</span><span><kbd>R</kbd>reset view</span><span><kbd>Esc</kbd>stop building</span></div>
+<div id="compass" class="panel" title="North"><svg id="needle" viewBox="0 0 24 24"><path d="M12 2 18 20 12 16 6 20z" fill="#dbe6f3"/><path d="M12 2v14l-6 4z" fill="#8fb4d9"/></svg></div>
+<div id="zoomBox">
+  <button class="zbtn panel" id="zIn" aria-label="Zoom in">+</button>
+  <button class="zbtn panel" id="zOut" aria-label="Zoom out">−</button>
+  <button class="zbtn panel" id="rotateLeft" aria-label="Rotate map left" title="Rotate left (Q)">↶</button>
+  <button class="zbtn panel" id="rotateRight" aria-label="Rotate map right" title="Rotate right (E)">↷</button>
+  <button class="zbtn panel" id="zFit" aria-label="Fit whole map"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6"/></svg></button>
+</div>
+<div id="mini" class="panel"><canvas id="miniC" width="256" height="256"></canvas></div>
+
+<footer id="bot">
+  <button class="mega" id="muteBtn" title="Sound on/off"><svg viewBox="0 0 24 24" width="22" height="22" fill="#dbe6f3"><path d="M3 10v4h3l6 4V6L6 10zm13-1.5v7a4.5 4.5 0 0 0 0-7z"/></svg></button>
+  <div id="log"></div>
+  <div class="tag">A CLEANER, BRIGHTER BLOCKCHAIN FUTURE</div>
+  <div class="ver" id="verTag">v0.2</div>
+</footer>
+
+<script src="assets/js/industrial-pack.js?v=033"></script>
+<script src="assets/js/telegram-account.js?v=033"></script>
+<script src="assets/js/game.js?v=033"></script>
+</body>
+</html>
+
